@@ -1,3 +1,4 @@
+package com.huckletoon.turingmachine;
 
 public class DeltaInput {
 

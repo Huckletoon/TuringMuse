@@ -1,8 +1,13 @@
+package com.huckletoon;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.huckletoon.grammar.GrammarMachine;
+import com.huckletoon.grammar.GrammarProduction;
 
 public class TuringMuse {
 	

@@ -1,3 +1,4 @@
+package com.huckletoon.grammar;
 import java.util.Map;
 import java.util.Hashtable;
 

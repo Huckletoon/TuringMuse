@@ -1,3 +1,4 @@
+package com.huckletoon.turingmachine;
 import java.util.ArrayList;
 import java.util.Map;
 

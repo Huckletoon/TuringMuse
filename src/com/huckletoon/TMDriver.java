@@ -1,8 +1,14 @@
+package com.huckletoon;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+
+import com.huckletoon.turingmachine.DeltaInput;
+import com.huckletoon.turingmachine.DeltaOutput;
+import com.huckletoon.turingmachine.TuringMachine;
 
 public class TMDriver {
 
