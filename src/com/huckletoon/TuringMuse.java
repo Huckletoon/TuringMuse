@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.huckletoon.bytemachine.ByteMachine;
 import com.huckletoon.grammar.GrammarMachine;
 import com.huckletoon.grammar.GrammarProduction;
 
@@ -16,6 +17,7 @@ public class TuringMuse {
 	static String file = "temp.mid";
 	
 	public static Byte[] HEADER = {0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x01, 0x00, 0x02, 0x01, (byte) 0xe0};
+	public static Byte[] WHOLE = {0x01, (byte)0xe0};
 	
 	// Test data used for analysis
 	static Byte[] data = new Byte[] {
@@ -44,33 +46,51 @@ public class TuringMuse {
 	
 	public static void main(String[] args) throws IOException {
 		
-		
+		// Initialize Grammar Machine
 		GrammarMachine gm = new GrammarMachine();
 		List<GrammarProduction> prods = buildDorianD();
 		for (int x = 0; x < prods.size(); x++) {
 			gm.addProduction(prods.get(x));
 		}
 		
+		// Run Grammar
 		gm.loadSeed("A");
 		gm.runGrammar();
 		String chordProgression = gm.getString();
 		System.out.println(chordProgression);
 		
-		/*
-		 * TODO
-		 * Below is pattern to write to midi file
-		List<Byte> musicData = new ArrayList<>();
-		Collections.addAll(musicData, data);
+		// Initialize ByteMachine
+		ByteMachine bMachine = new ByteMachine();
+		bMachine.loadInput(chordProgression);
+		System.out.println(bMachine);
+		while (bMachine.step()) {
+			System.out.println(bMachine);
+		}
+		bMachine.finishByte();
 		
-		byte[] testData = new byte[musicData.size()];
+		ArrayList<Byte> musicData = new ArrayList<>();
+		int dataSize = bMachine.getByteTape().size();
+		int padding = 0;
+		if (dataSize < 16777216) { padding++; }
+		if (dataSize < 65536) { padding++; }
+		if (dataSize < 256) { padding++; }
+		Collections.addAll(musicData, ByteMachine.HEADER_CHUNK);
+		Collections.addAll(musicData, ByteMachine.TRACK_CHUNK_HEAD);
+		for (int x = 0; x < padding; x++) {
+			musicData.add((byte) 0x00);
+		}
+		musicData.add((byte)dataSize);
+		musicData.addAll(bMachine.getByteTape());
+		
+		byte[] rawData = new byte[musicData.size()];
 		for (int i = 0; i < musicData.size(); i++) {
-			testData[i] = musicData.get(i);
+			rawData[i] = musicData.get(i);
 		}
 
 		FileOutputStream outStr = new FileOutputStream(file);
-		outStr.write(testData);
+		outStr.write(rawData);
 		outStr.close();
-		*/
+		
 	}
 	
 	private static List<GrammarProduction> buildDorianD() {
