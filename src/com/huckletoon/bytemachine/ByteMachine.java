@@ -1,27 +1,23 @@
 package com.huckletoon.bytemachine;
 
-import com.huckletoon.turingmachine.DeltaInput;
-
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
-import java.util.Hashtable;
 
 public class ByteMachine {
 	
 	public static Byte BLANK = 0x7f;
-	public static Byte[] HEADER_CHUNK = {0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x01, (byte) 0xe0};
+	public static Byte[] HEADER_CHUNK = {0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, (byte) 0x50};
 	public static Byte[] TRACK_CHUNK_HEAD = {0x4d, 0x54, 0x72, 0x6b};
 	public static Byte[] END_OF_TRACK = {(byte) 0xff, 0x2f, 0x00};
 	
 	// Event Arguments
 	public static Byte NOTE_ON = (byte) 0x90;
 	public static Byte NOTE_OFF = (byte) 0x80;
+	public static Byte IMMEDIATE = 0x00;
 	public static Byte HALF_NOTE = (byte) 0xf0;
+	public static Byte[] WHOLE_NOTE = {(byte) 0x81, (byte)0x70};
 	public static Byte FORTE = 0x5f;
 	public static Byte OFF_VELOCITY = 0x40;
-	public static Byte IMMEDIATE = 0x00;
 	
 	// Note values
 	public static Byte[] NOTE_A = {0x09, 0x15, 0x21, 0x2d, 0x39, 0x45, 0x51, 0x5d, 0x69, 0x75};
@@ -78,17 +74,21 @@ public class ByteMachine {
 	}
 	
 	public void finishByte() {
+		Collections.addAll(byteTape, WHOLE_NOTE);
 		Collections.addAll(byteTape, END_OF_TRACK);
 		isDone = true;
 	}
 	
 	public boolean step() {
-		if (!doneOnce) {
-			doneOnce = true;
-		}
 		if (!isDone && headPos < inputTape.length()) {
 			char readChar = inputTape.charAt(headPos);
 			lookup(readChar);
+			if (!doneOnce) {
+				doneOnce = true;
+			}
+			return true;
+		} else if (headPos == inputTape.length()) {
+			lookup('a');
 			return true;
 		} else {
 			return false;
@@ -99,74 +99,95 @@ public class ByteMachine {
 
 		if (state == LOOKING_FOR_ROOT) {
 
+			// Note Off
 			if (doneOnce) {
 				int third = (chordRoot + 2) % 7;
 				int fifth = (chordRoot + 4) % 7;
-				byteTape.add(HALF_NOTE);
+
+				Collections.addAll(byteTape, WHOLE_NOTE);
 				byteTape.add(NOTE_OFF);
 				byteTape.add(noteArray.get(chordRoot)[octave]);
 				byteTape.add(OFF_VELOCITY);
+				
+				byteTape.add(IMMEDIATE);
+				byteTape.add(NOTE_OFF);
 				byteTape.add(noteArray.get(third)[octave]);
 				byteTape.add(OFF_VELOCITY);
+				
+				byteTape.add(IMMEDIATE);
+				byteTape.add(NOTE_OFF);
 				byteTape.add(noteArray.get(fifth)[octave]);
 				byteTape.add(OFF_VELOCITY);
 				if (seventhPrev) {
 					int seventh = (chordRoot + 6) % 7;
+					byteTape.add(IMMEDIATE);
+					byteTape.add(NOTE_OFF);
 					byteTape.add(noteArray.get(seventh)[octave]);
 					byteTape.add(OFF_VELOCITY);
 				}
 			}
 			
 			switch(character) {
-			case 'a':
-				chordRoot = 0;
-				break;
-			case 'c':
-				chordRoot = 2;
-				break;
-			case 'd':
-				chordRoot = 3;
-				break;
-			case 'e':
-				chordRoot = 4;
-				break;
-			case 'f':
-				chordRoot = 5;
-				break;
-			case 'g':
-				chordRoot = 6;
-				break;
+				case 'a':
+					chordRoot = 0;
+					break;
+				case 'c':
+					chordRoot = 2;
+					break;
+				case 'd':
+					chordRoot = 3;
+					break;
+				case 'e':
+					chordRoot = 4;
+					break;
+				case 'f':
+					chordRoot = 5;
+					break;
+				case 'g':
+					chordRoot = 6;
+					break;
 			}
 			headPos++;
-			byteTape.add((doneOnce ? IMMEDIATE : HALF_NOTE));
-			byteTape.add(NOTE_ON);
 			state = BUILDING_CHORD;
 			
 		} else if (state == BUILDING_CHORD) {
+			
 			boolean sevFlag = false;
 			switch(character) {
-			case '+':
-			case '-':
-			case '7':
-				sevFlag = true;
-				seventhPrev = true;
-				int seventh = (chordRoot + 6) % 7;
-				byteTape.add(noteArray.get(seventh)[octave]);
-				byteTape.add(FORTE);
-			case 'm':
-			case 'M':
-				if (!sevFlag) {
-					seventhPrev = false;
-				}
-				int third = (chordRoot + 2) % 7;
-				int fifth = (chordRoot + 4) % 7;
-				byteTape.add(noteArray.get(chordRoot)[octave]);
-				byteTape.add(FORTE);
-				byteTape.add(noteArray.get(third)[octave]);
-				byteTape.add(FORTE);
-				byteTape.add(noteArray.get(fifth)[octave]);
-				byteTape.add(FORTE);
-				break;
+				case '+':
+				case '-':
+				case '7':
+					sevFlag = true;
+					seventhPrev = true;
+					int seventh = (chordRoot + 6) % 7;
+					Collections.addAll(byteTape, WHOLE_NOTE);
+					byteTape.add(NOTE_ON);
+					byteTape.add(noteArray.get(seventh)[octave]);
+					byteTape.add(FORTE);
+				case 'm':
+				case 'M':
+					if (!sevFlag) {
+						seventhPrev = false;
+						Collections.addAll(byteTape, WHOLE_NOTE);
+					} else {
+						byteTape.add(IMMEDIATE);
+					}
+					int third = (chordRoot + 2) % 7;
+					int fifth = (chordRoot + 4) % 7;
+					byteTape.add(NOTE_ON);
+					byteTape.add(noteArray.get(chordRoot)[octave]);
+					byteTape.add(FORTE);
+					
+					byteTape.add(IMMEDIATE);
+					byteTape.add(NOTE_ON);
+					byteTape.add(noteArray.get(third)[octave]);
+					byteTape.add(FORTE);
+					
+					byteTape.add(IMMEDIATE);
+					byteTape.add(NOTE_ON);
+					byteTape.add(noteArray.get(fifth)[octave]);
+					byteTape.add(FORTE);
+					break;
 			}
 			state = LOOKING_FOR_ROOT;
 			headPos++;
